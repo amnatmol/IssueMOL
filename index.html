@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8f6fc; color: #444; }
+    .bg-purple { background-color: #6f42c1 !important; color: white; }
+    .btn-purple { background-color: #6f42c1; color: white; border-radius: 8px; padding: 10px 20px; transition: 0.3s; border: none; }
+    .btn-purple:hover { background-color: #563d7c; color: white; transform: scale(1.02); }
+    .card { border-radius: 20px; border: none; box-shadow: 0 10px 25px rgba(111, 66, 193, 0.1); overflow: hidden; }
+    .form-label { font-weight: 600; color: #563d7c; }
+    .logo-header { max-width: 140px; margin-bottom: 15px; }
+    .nav-tabs .nav-link.active { background-color: #6f42c1; color: white; border: none; }
+    .d-none { display: none !important; }
+
+    .table-success-light { background-color: rgba(40, 167, 69, 0.05); }
+.table-warning-light { background-color: rgba(255, 193, 7, 0.05); }
+.table-danger-light { background-color: rgba(220, 53, 69, 0.05); }
+
+@media print {
+    /* ตั้งค่าหน้ากระดาษ A4 */
+    @page {
+      size: A4;
+      margin: 15mm;
+    }
+    
+    /* ซ่อนส่วนที่ไม่ต้องการในรายงาน */
+    #mainMenu, #loginSection, #meetingSection, .btn, #dashDateSelect, label, .swal2-container {
+      display: none !important;
+    }
+
+    /* จัดการตัวรายงาน */
+    .container {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .card {
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    /* จัดขนาดกราฟให้พอดี ไม่ใหญ่เกินไป */
+    #myChart {
+      max-height: 350px !important;
+      margin: 0 auto 20px auto !important;
+    }
+
+    /* ตารางรายงาน */
+    .table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 14pt !important; /* ปรับขนาดตัวอักษรให้เหมาะสมกับงานเอกสาร */
+    }
+    
+    .table th, .table td {
+      border: 1px solid #000 !important; /* เส้นขอบสีดำชัดเจน */
+      padding: 8px !important;
+    }
+
+    /* บังคับให้พิมพ์สีสถานะออกมาด้วย */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+  </style>
+</head>
+<body>
+
+<div class="container py-4">
+  <div class="text-center mb-4">
+    <img src="https://amnatcharoen.mol.go.th/_static_html/images/logo-mol.png" class="logo-header">
+    <h3 class="fw-bold" style="color: #4b0082;">ระบบตอบรับการประชุมออนไลน์</h3>
+    <hr class="mx-auto" style="width: 100px; height: 4px; background: #6f42c1; opacity: 1;">
+  </div>
+
+  <div id="mainMenu" class="row justify-content-center g-4">
+    <div class="col-md-5 col-lg-4">
+      <div class="card text-center p-5 h-100" onclick="showSection('meetingSection')" style="cursor: pointer;">
+        <div class="display-3 mb-3">📝</div>
+        <h4>ตอบรับการประชุม</h4>
+        <p class="text-muted">สำหรับอาสาสมัครลงทะเบียน</p>
+      </div>
+    </div>
+    <div class="col-md-5 col-lg-4">
+      <div class="card text-center p-5 h-100" onclick="showSection('loginSection')" style="cursor: pointer;">
+        <div class="display-3 mb-3">📊</div>
+        <h4>Dashboard</h4>
+        <p class="text-muted">สำหรับเจ้าหน้าที่ติดตามผล</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="meetingSection" class="row justify-content-center d-none">
+    <div class="col-md-10 col-lg-8">
+      <div class="card">
+        <div class="bg-purple p-3 text-center fw-bold">1.1 ข้อมูลการประชุม</div>
+        <div id="meetingDetail" class="card-body bg-light m-3 rounded border text-center">กำลังโหลดข้อมูลการประชุม...</div>
+        
+        <form id="regForm" class="p-4 pt-0">
+          <div class="bg-purple p-2 mb-3 rounded-1 text-center small">1.2 ข้อมูลผู้เข้าร่วม</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label">อำเภอ</label>
+              <select id="selAmphur" class="form-select shadow-sm" onchange="updateTambon()" required></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">ตำบล</label>
+              <select id="selTambon" class="form-select shadow-sm" onchange="updateName()" required></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">ชื่อ-นามสกุล</label>
+              <select id="selName" name="name" class="form-select shadow-sm" required></select>
+            </div>
+          </div>
+
+          <div class="bg-purple p-2 mb-3 rounded-1 text-center small">1.3 สถานะการตอบรับ</div>
+          <div class="p-3 border rounded shadow-sm mb-4 bg-white">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="status" value="เข้าร่วมประชุม" checked onclick="toggleProxy(false)">
+              <label class="form-check-label fw-bold text-success">✅ เข้าร่วมประชุม</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="status" value="มอบหมายบุคคลอื่น" onclick="toggleProxy(true)">
+              <label class="form-check-label fw-bold text-danger">❌ ไม่สามารถเข้าร่วมได้ (มอบหมายบุคคลอื่น)</label>
+            </div>
+            <input type="text" id="proxyName" class="form-control mt-3 d-none shadow-sm" placeholder="ระบุชื่อ-นามสกุล ผู้รับมอบหมาย">
+          </div>
+
+          <div class="row g-2">
+            <div class="col-4"><button type="button" class="btn btn-outline-secondary w-100" onclick="location.reload()">ย้อนกลับ</button></div>
+            <div class="col-8"><button type="submit" class="btn btn-purple w-100">ยืนยันการส่งข้อมูล</button></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="loginSection" class="row justify-content-center d-none">
+    <div class="col-md-5">
+      <div class="card p-4 shadow">
+        <h4 class="text-center mb-4">🔐 เข้าสู่ระบบ</h4>
+        <div class="mb-3">
+          <label>Username</label>
+          <input type="text" id="user" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label>Password</label>
+          <input type="password" id="pass" class="form-control">
+        </div>
+        <button class="btn btn-purple w-100" onclick="handleLogin()">เข้าสู่ระบบ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboardSection" class="d-none">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <h4>📊 รายงานการตอบรับ</h4>
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-primary" onclick="printReport()">🖨️ พิมพ์รายงาน</button> <button class="btn btn-sm btn-outline-danger" onclick="location.reload()">ออกจากระบบ</button>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <label class="small fw-bold">เลือกวันที่ประชุม:</label>
+    <select id="dashDateSelect" class="form-select form-select-sm" onchange="loadDashboardByDate()" style="width: auto;">
+      <option value="">-- เลือกวันที่ --</option>
+    </select>
+  </div>
+  </div>
+      <div class="row">
+        <div class="col-md-6 mb-4"><canvas id="myChart"></canvas></div>
+        <div class="col-md-6">
+          <div class="table-responsive">
+            <table class="table table-hover border">
+              <thead class="bg-purple text-white">
+                <tr><th>ชื่อ-สกุล</th><th>สถานะ</th><th>ผู้แทน</th></tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let allVolunteers = [];
+  let meetingTitle = "";
+  let myChart = null;
+
+  window.onload = () => {
+    google.script.run.withSuccessHandler(data => {
+      if(data) {
+        meetingTitle = data.title;
+        document.getElementById('meetingDetail').innerHTML = `<strong>${data.title}</strong><br><small>วันที่ : ${data.date} | สถานที่ : ${data.location}<br>หมายเหตุ: ${data.note}</small>`;
+      }
+    }).getLatestMeeting();
+
+    google.script.run.withSuccessHandler(data => {
+      allVolunteers = data;
+      const amphurs = [...new Set(data.map(i => i[5].trim()))].filter(x => x);
+      document.getElementById('selAmphur').innerHTML = '<option value="">เลือกอำเภอ</option>' + 
+        amphurs.map(a => `<option value="${a}">${a}</option>`).join('');
+    }).getVolunteerData();
+  };
+
+  function showSection(id) {
+    document.querySelectorAll('.container > div').forEach(d => { if(d.id !== '') d.classList.add('d-none'); });
+    document.getElementById(id).classList.remove('d-none');
+  }
+
+  function updateTambon() {
+    const selectedAmp = document.getElementById('selAmphur').value;
+    const selTam = document.getElementById('selTambon');
+    selTam.innerHTML = '<option value="">เลือกตำบล</option>';
+    if (selectedAmp) {
+      const tambons = [...new Set(allVolunteers.filter(v => v[5].trim() === selectedAmp).map(v => v[6].trim()))];
+      selTam.innerHTML += tambons.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+  }
+
+  function updateName() {
+    const selectedAmp = document.getElementById('selAmphur').value;
+    const selectedTam = document.getElementById('selTambon').value;
+    const selName = document.getElementById('selName');
+    selName.innerHTML = '<option value="">เลือกชื่อ-นามสกุล</option>';
+    if (selectedTam) {
+      const names = allVolunteers.filter(v => v[5].trim() === selectedAmp && v[6].trim() === selectedTam).map(v => v[1].trim());
+      selName.innerHTML += names.map(n => `<option value="${n}">${n}</option>`).join('');
+    }
+  }
+
+  function toggleProxy(show) { 
+    const p = document.getElementById('proxyName');
+    p.classList.toggle('d-none', !show); 
+    p.required = show;
+  }
+
+  document.getElementById('regForm').onsubmit = function(e) {
+    e.preventDefault();
+    const fd = {
+      name: document.getElementById('selName').value,
+      status: document.querySelector('input[name="status"]:checked').value,
+      proxyName: document.getElementById('proxyName').value,
+      meetingTitle: meetingTitle
+    };
+    if(!fd.name) return Swal.fire('คำเตือน', 'กรุณาเลือกชื่อ-นามสกุล', 'warning');
+    Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    google.script.run.withSuccessHandler(res => {
+      Swal.fire('สำเร็จ!', `คุณ ${res.name} ตอบรับเป็นคนที่ ${res.count}`, 'success').then(() => location.reload());
+    }).withFailureHandler(err => Swal.fire('ขอโทษนะคะ', err.message, 'error')).submitMeeting(fd);
+  };
+
+  // --- ส่วน Dashboard (ฉบับแก้ไข) ---
+  function handleLogin() {
+    const u = document.getElementById('user').value;
+    const p = document.getElementById('pass').value;
+    google.script.run.withSuccessHandler(res => {
+      if(res.success) {
+        showSection('dashboardSection');
+        google.script.run.withSuccessHandler(dates => {
+          const sel = document.getElementById('dashDateSelect');
+          sel.innerHTML = '<option value="">-- เลือกวันที่ --</option>' + dates.map(d => `<option value="${d}">${d}</option>`).join('');
+        }).getMeetingDates();
+      } else { Swal.fire('ล้มเหลว', 'Username หรือ Password ไม่ถูกต้อง', 'error'); }
+    }).adminLogin(u, p);
+  }
+
+  function loadDashboardByDate() {
+    const date = document.getElementById('dashDateSelect').value;
+    if(!date) return;
+    Swal.fire({ title: 'กำลังดึงข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    google.script.run.withSuccessHandler(res => {
+      Swal.close();
+      renderDashboard(res);
+    }).getDashboardDataByDate(date);
+  }
+
+  function renderDashboard(res) {
+  const { respondedData, allVolunteers } = res;
+  const selectedDate = document.getElementById('dashDateSelect').value;
+  let [attend, proxy, notResponded] = [0, 0, 0];
+
+  const tableRows = allVolunteers.map(name => {
+    const match = respondedData.find(d => d[0].trim() === name.trim());
+    
+    let statusText = "";
+    let proxyName = "-";
+    let rowClass = "";
+
+    if (match) {
+      proxyName = match[2];
+      if (match[1] === 'เข้าร่วมประชุม') {
+        attend++;
+        // ใช้สีน้ำเงินสำหรับ "เข้าร่วมประชุม"
+        statusText = '<span class="fw-bold" style="color: #007bff;">เข้าร่วมประชุม</span>';
+        rowClass = "table-success-light";
+      } else {
+        proxy++;
+        // ใช้สีส้มสำหรับ "มอบหมาย"
+        statusText = '<span class="fw-bold" style="color: #fd7e14;">มอบหมายบุคคลอื่น</span>';
+        rowClass = "table-warning-light";
+      }
+    } else {
+      notResponded++;
+      // ใช้สีแดงสำหรับ "ยังไม่ตอบ"
+      statusText = '<span class="fw-bold" style="color: #dc3545;">ยังไม่ตอบ</span>';
+      rowClass = "table-danger-light";
+    }
+
+    return `<tr class="${rowClass}">
+              <td>${name}</td>
+              <td>${statusText}</td>
+              <td>${proxyName}</td>
+            </tr>`;
+  }).join('');
+
+  // อัปเดตกราฟ (แท่งสุดท้ายเป็นสีแดงเพื่อให้สอดคล้องกับตัวหนังสือ)
+  if (myChart) myChart.destroy();
+  myChart = new Chart(document.getElementById('myChart'), {
+    type: 'bar',
+    data: {
+      labels: ['ร่วมประชุม', 'มอบหมาย', 'ยังไม่ตอบ'],
+      datasets: [{
+        label: 'จำนวน (คน)',
+        data: [attend, proxy, notResponded],
+        backgroundColor: ['#007bff', '#fd7e14', '#dc3545'] // ปรับสีแท่งกราฟให้ตรงกับตาราง
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: `สรุปการตอบรับ (${selectedDate})` }
+      },
+      scales: { y: { beginAtZero: true, max: allVolunteers.length } }
+    }
+  });
+
+  document.getElementById('tableBody').innerHTML = tableRows;
+}
+
+function printReport() {
+  const dateStr = document.getElementById('dashDateSelect').value;
+  if (!dateStr) {
+    Swal.fire('คำเตือน', 'กรุณาเลือกวันที่ประชุมก่อนพิมพ์', 'warning');
+    return;
+  }
+  window.print(); // เรียกคำสั่งพิมพ์ของ Browser
+}
+</script>
+</body>
+</html>
