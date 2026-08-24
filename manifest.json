@@ -1,21 +1,15 @@
 {
-  "short_name": "ระบบแรงงาน",
-  "name": "ระบบบริหารจัดการข้อมูล สำนักงานแรงงานจังหวัด",
+  "name": "สถานการณ์แรงงานจังหวัดอำนาจเจริญ",
+  "short_name": "สรจ.อำนาจเจริญ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#4a154b",
+  "theme_color": "#6f42c1",
   "icons": [
     {
-      "src": "icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "./icon-192.png",
+      "sizes": "590x590",
+      "type": "image/png"
     }
-  ],
-  "start_url": "index.html",
-  "background_color": "#5B21B6",
-  "theme_color": "#5B21B6",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }
